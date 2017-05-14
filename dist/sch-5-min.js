@@ -8,21 +8,17 @@ var _underscore = require('underscore');
 
 var _underscore2 = _interopRequireDefault(_underscore);
 
-var _async = require('async');
-
-var _async2 = _interopRequireDefault(_async);
-
 var _request = require('request');
 
 var _request2 = _interopRequireDefault(_request);
 
-var _FirebaseClient = require('./FirebaseClient');
+var _fcmNode = require('fcm-node');
 
-var _FirebaseClient2 = _interopRequireDefault(_FirebaseClient);
+var _fcmNode2 = _interopRequireDefault(_fcmNode);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-;(function (DB, FirebaseClient, async) {
+;(function (DB, FCM) {
 	'use strict';
 
 	// get Today Date Format YYYYMMDD
@@ -55,107 +51,36 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 		},
 		"notiConfig": {
 			"SERVER_KEY": 'AIzaSyA7eao_wnLiS-hdU9r7-KQuPcpq7tPJYXs',
-			"API_URL": "https://fcm.googleapis.com/fcm/send",
-			"API_PATH": "/fcm/send"
+			"API_URL": "https://fcm.googleapis.com/fcm/send"
 		}
 	};
 
-	var initializeDatabase = function initializeDatabase(cb) {
-		DB.initializeApp(config.dbConfig);
-		cb(null, DB);
+	var wait1000 = function wait1000() {
+		return new Promise(function (resolve, reject) {
+			setTimeout(resolve, 3000);
+		});
 	};
 
-	var getBookInstances = function getBookInstances(DB, cb) {
-		DB.database().ref("NotificationGroup/").on('value', function (result) {
-
-			// for(let i=0; i<result.key.length; i++){
-			// 	console.log(result.key[i].);
-			// }
-			var rootData = result.val();
-			if ("undefined" !== typeof rootData[curDate]) {
-				console.log("today: ", curDate);
-
-				_underscore2.default.each(rootData[curDate], function (rowDateData, rowDateNum) {
-
-					var alphabet = config.unitRange.split("");
-
-					_underscore2.default.each(alphabet, function (letter) {
-
-						if ("undefined" !== typeof rowDateData[letter]) {
-
-							console.log("current hour: ", curHour);
-
-							if ("undefined" !== typeof rowDateData[letter][curHour]) {
-								console.log(rowDateData[letter][curHour]);
-							}
-						}
-					});
-
-					cb(null, "test");
-				});
-			}
-		});;
+	var send = function send(data) {
+		return new Promise(function (resolve, reject) {
+			console.log(data);
+			setTimeout(resolve, 3000);
+		});
 	};
-
-	// let sendNotification = function(userToken, floorNum, unitNum, hour){
-
-
-	// 		let body = {
-	// 	            "data":{
-	// 	                "title": floorNum + unitNum + config.message.title,
-	// 	                "body": floorNum + unitNum + config.message.content,
-	// 	                "sound": "default",
-	// 	                "click_action": "fcm.ACTION.HELLO",
-	// 	                "remote": true
-	// 	            },
-	// 	            "priority": "normal"
-	// 	      };
-
-	// 		body["to"] = userToken;
-	// 		body = JSON.stringify(body);
-
-	// 		console.log("send noti body -> ", body);
-
-	// 		// Set the headers
-	// 		let headers = {
-	// 			"Content-Type": "application/json",
-	// 			"Content-Length": parseInt(body.length),
-	// 			"Authorization": "key=" + config.notiConfig.SERVER_KEY
-	// 		}
-
-	// 		// Configure the request
-	// 		let options = {
-	// 		    url: config.notiConfig.API_URL,
-	// 		    method: 'POST',
-	// 		    headers: headers,
-	// 		    form: body
-	// 		}
-	// 		// console.log(options)
-	// 		// Start the request
-	// 		request(options, function (error, response, body) {
-
-	// 		// console.log(error, response.statusCode, response)
-	// 		    if (!error && response.statusCode == 200) {
-	// 		        // Print out the response body
-	// 		        console.log(body)
-	// 		    }
-	// 		})
-
-
-	// };
 
 	var endProcess = function endProcess() {
 		// Node Shut Down
 		process.exit();
 	};
 
-	async.waterfall([function (cb) {
-		// initializing Firebase DB
+	var resData = {};
 
+	wait1000().then(function () {
+		console.log('Step 1 :: DB initialized !');
 		DB.initializeApp(config.dbConfig);
-		cb(null, DB);
-	}, function (DB, cb) {
-		// get instances from Firebase DB
+		return wait1000();
+	}).then(function () {
+		console.log('Step 2 :: get Data !');
 
 		var database = DB.database().ref();
 
@@ -166,67 +91,103 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 			database.child("UserData/").once('value', function (usersData) {
 				var users = usersData.val();
 
-				// let arrUserToken = [];
+				// console.log("notice: ", notifications);
 
-				console.log("notice: ", notifications);
-				// if("undefined" !== typeof notiData.val()[curDate]){
+				if ("undefined" !== typeof notifications[curDate]) {
 
-				console.log("today: ", curDate);
-				cb(null, notifications);
+					_underscore2.default.each(notifications[curDate], function (rowDateData, rowDateKey, rowDateList) {
 
-				// }
+						var alphabet = config.unitRange.split("");
 
-				// _.each(notices[curDate],function(rowDateData,rowDateKey, rowDateList){
+						_underscore2.default.each(alphabet, function (letter) {
 
-				// 	let alphabet = config.unitRange.split("");
+							if ("undefined" !== typeof rowDateData[letter]) {
 
-				// 	_.each(alphabet, function(letter) {
+								if ("undefined" !== typeof rowDateData[letter][curHour]) {
 
-				// 		if("undefined" !== typeof rowDateData[letter]){
+									if ("undefined" == typeof resData[rowDateKey]) resData[rowDateKey] = {};
+									resData[rowDateKey][letter] = [];
 
-				// 			if("undefined" !== typeof rowDateData[letter][curHour]){
+									// Members
+									if ("undefined" !== typeof rowDateData[letter][curHour].users.members) {
+										_underscore2.default.each(rowDateData[letter][curHour].users.members, function (userId, i) {
+											if ("undefined" !== typeof users[userId].userPushToken) {
+												resData[rowDateKey][letter].push(users[userId].userPushToken);
+											}
+										});
+									}
 
-				// 				// if("undefined" == typeof res[rowDateKey][letter][curHour]) res[rowDateKey][letter][curHour] = rowDateData[letter][curHour];
-
-
-				// 				// Members
-				// 				if("undefined" !== typeof rowDateData[letter][curHour].users.members){
-				// 					_.each(rowDateData[letter][curHour].users.members, function(userId, i){
-				// 						if("undefined" !== typeof users[userId].userPushToken){
-				// 							arrUserToken.push(users[userId].userPushToken);
-				// 						}
-				// 					});
-				// 				} 
-
-				// 				// Owner
-				// 				if("undefined" !== typeof users[userId].userPushToken){
-				// 					let ownerUserId = rowDateData[letter][curHour].users.owner;
-				// 					arrUserToken.push(users[ownerUserId].userPushToken);
-				// 				}
-
-
-				// 				console.log(arrUserToken)
-
-
-				// 				cb(null, arrUserToken);
-				// 				// sendNotification(arrUserId, rowDateKey, letter, curHour);;
-				// 				// console.log(rowDateKey, "<-");
-				// 				// console.log(rowDateData[letter][curHour]);
-
-
-				// 			}
-
-
-				// 		}
-
-				// 	});
-
-				// });
-
+									// Owner
+									if ("undefined" !== typeof rowDateData[letter][curHour].users.owner) {
+										var ownerUserId = rowDateData[letter][curHour].users.owner;
+										resData[rowDateKey][letter].push(users[ownerUserId].userPushToken);
+									}
+								}
+							}
+						});
+					});
+				}
 			});
 		});
-	}], function (err, result) {
-		console.log(result);
-		endProcess();
+
+		return wait1000();
+	}).then(function () {
+		console.log('Wheeyee! -> ', resData);
+
+		async function _send(cb, userToken) {
+			console.log(userToken);
+			var fcm = new FCM(config.notiConfig.SERVER_KEY);
+
+			var message = { //this may vary according to the message type (single recipient, multicast, topic, et cetera) 
+				to: userToken,
+				collapse_key: 'Meeting Room Alarm',
+
+				"notification": {
+					"title": "Simple FCM Client",
+					"body": "This is a notification with only NOTIFICATION.",
+					"sound": "default",
+					"click_action": "fcm.ACTION.HELLO"
+				}
+			};
+
+			await fcm.send(message, function (err, response) {
+				if (err) {
+					console.log("Something has gone wrong!");
+				} else {
+					console.log("Successfully sent with response: ", response);
+				}
+				cb();
+			});
+		}
+
+		function setPromiseSendNoti(userToken) {
+			return new Promise(function (resolve) {
+				return _send(resolve, userToken);
+			});
+		}
+		async function sendNotification() {
+			try {
+				for (var floor in resData) {
+					if (resData.hasOwnProperty(floor)) {
+						console.log(floor);
+						for (var unit in resData[floor]) {
+							if (resData[floor].hasOwnProperty(unit)) {
+								for (var i = 0; i < resData[floor][unit].length; i++) {
+									// 	console.log(unit , typeof resData[floor][unit], resData[floor][unit][0]);
+									await setPromiseSendNoti(resData[floor][unit][i]);
+									// await console.log(resData[floor][unit][i])
+								}
+							}
+						}
+					}
+				}
+			} catch (err) {
+				console.log(err);
+			} finally {
+				endProcess();
+			}
+		}
+
+		sendNotification();
 	});
-})(_firebase2.default, _FirebaseClient2.default, _async2.default);
+})(_firebase2.default, _fcmNode2.default);

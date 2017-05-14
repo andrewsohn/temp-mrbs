@@ -19,9 +19,9 @@ gulp.task('build', () => {
 gulp.task('start', (cb) => {
 
     let jsname = 'sch-5-min';
-    //jsname = 'test';
+    // jsname = 'test2';
 
-    exec(`node dist/${jsname}.js`, function (err, stdout, stderr) {
+    exec(`node --harmony-async-await ./dist/${jsname}.js`, function (err, stdout, stderr) {
         console.log(stdout);
         console.log(stderr);
         cb(err);

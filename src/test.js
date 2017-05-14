@@ -1,12 +1,10 @@
-var Firebase = require('firebase');
-var _ = require('underscore');
-var async = require('async');
-// var querystring = require('querystring');
-// var http = require('http');
-// var fetch = require('node-fetch');
-var request = require('request');
+import Firebase from 'firebase';
+import _ from 'underscore';
+import async from 'async';
+import request from 'request';
+import FCM from 'fcm-node';
 
-;(function(DB){
+;(function(DB, FCM){
 	'use strict';
 
 	// get Today Date Format YYYYMMDD
@@ -146,17 +144,51 @@ var request = require('request');
 		function(DB, cb){ // get instances from Firebase DB
 			// console.log(db)
 
-			var database = DB.database().ref();
-			database.child("NotificationGroup/").once('value', function(notiData){
-				var notices = notiData.val();
+			// var database = DB.database().ref();
+			// database.child("NotificationGroup/").once('value', function(notiData){
+			// 	var notices = notiData.val();
 				
-				database.child("UserData/").once('value', function(usersData){
-					var users = usersData.val();
-				
+			// 	database.child("UserData/").once('value', function(usersData){
+			// 		var users = usersData.val();
+			let arr = [ 'eQlGBSZc_lM:APA91bG-_hgSFQ5DOWAUPHMDiKjVOpbdL4CD0gBqhvT6CeBvlZ3bs6T1BSDsekgIiSz-QEOU5nGw2ks_A1tozDzHHPhHBRiwd22fFggqPmiVr9wvBNAzzvXASFYoFpusLbaI8FHWypXo' ];	
 
-					cb(null, notices);
-				});
-			});
+
+			var serverKey = 'AIzaSyA7eao_wnLiS-hdU9r7-KQuPcpq7tPJYXs';
+		    var fcm = new FCM(serverKey);
+		 
+		    var message = { //this may vary according to the message type (single recipient, multicast, topic, et cetera) 
+		        to: 'eQlGBSZc_lM:APA91bG-_hgSFQ5DOWAUPHMDiKjVOpbdL4CD0gBqhvT6CeBvlZ3bs6T1BSDsekgIiSz-QEOU5nGw2ks_A1tozDzHHPhHBRiwd22fFggqPmiVr9wvBNAzzvXASFYoFpusLbaI8FHWypXo', 
+		        collapse_key: 'Meeting Room Alarm',
+		        
+		        "notification":{
+		            "title": "Simple FCM Client",
+		            "body": "This is a notification with only NOTIFICATION.",
+		            "sound": "default",
+		            "click_action": "fcm.ACTION.HELLO"
+		        },
+		        
+		        // data: {  //you can send only notification or only data(or include both) 
+		        //     "title": "Simple FCM Client",
+		        //     "body": "This is a notification with only DATA.",
+		        //     "sound": "default",
+		        //     "click_action": "fcm.ACTION.HELLO",
+		        //     "remote": true
+		        // }
+		    };
+		    
+		    fcm.send(message, function(err, response){
+		        if (err) {
+		            console.log("Something has gone wrong!");
+		        } else {
+		            console.log("Successfully sent with response: ", response);
+		        }
+		    });
+
+
+			// FirebaseClient.sendNotificationWithData(arr);
+			// 		cb(null, notices);
+			// 	});
+			// });
 		}
 	], function(err, result){
 		console.log(result);
@@ -164,4 +196,4 @@ var request = require('request');
 		
 	});
 	
-})(Firebase);
+})(Firebase, FCM);

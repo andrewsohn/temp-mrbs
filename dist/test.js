@@ -1,14 +1,28 @@
 'use strict';
 
-var Firebase = require('firebase');
-var _ = require('underscore');
-var async = require('async');
-// var querystring = require('querystring');
-// var http = require('http');
-// var fetch = require('node-fetch');
-var request = require('request');
+var _firebase = require('firebase');
 
-;(function (DB) {
+var _firebase2 = _interopRequireDefault(_firebase);
+
+var _underscore = require('underscore');
+
+var _underscore2 = _interopRequireDefault(_underscore);
+
+var _async = require('async');
+
+var _async2 = _interopRequireDefault(_async);
+
+var _request = require('request');
+
+var _request2 = _interopRequireDefault(_request);
+
+var _fcmNode = require('fcm-node');
+
+var _fcmNode2 = _interopRequireDefault(_fcmNode);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+;(function (DB, FCM) {
 	'use strict';
 
 	// get Today Date Format YYYYMMDD
@@ -59,11 +73,11 @@ var request = require('request');
 			if ("undefined" !== typeof rootData[curDate]) {
 				console.log("today: ", curDate);
 
-				_.each(rootData[curDate], function (rowDateData, rowDateNum) {
+				_underscore2.default.each(rootData[curDate], function (rowDateData, rowDateNum) {
 
 					var alphabet = config.unitRange.split("");
 
-					_.each(alphabet, function (letter) {
+					_underscore2.default.each(alphabet, function (letter) {
 
 						if ("undefined" !== typeof rowDateData[letter]) {
 
@@ -115,7 +129,7 @@ var request = require('request');
 		};
 		// console.log(options)
 		// Start the request
-		request(options, function (error, response, body) {
+		(0, _request2.default)(options, function (error, response, body) {
 
 			// console.log(error, response.statusCode, response)
 			if (!error && response.statusCode == 200) {
@@ -130,7 +144,7 @@ var request = require('request');
 		process.exit();
 	};
 
-	async.waterfall([function (cb) {
+	_async2.default.waterfall([function (cb) {
 		// initializing Firebase DB
 		DB.initializeApp(config.dbConfig);
 		cb(null, DB);
@@ -138,18 +152,44 @@ var request = require('request');
 		// get instances from Firebase DB
 		// console.log(db)
 
-		var database = DB.database().ref();
-		database.child("NotificationGroup/").once('value', function (notiData) {
-			var notices = notiData.val();
+		// var database = DB.database().ref();
+		// database.child("NotificationGroup/").once('value', function(notiData){
+		// 	var notices = notiData.val();
 
-			database.child("UserData/").once('value', function (usersData) {
-				var users = usersData.val();
+		// 	database.child("UserData/").once('value', function(usersData){
+		// 		var users = usersData.val();
+		var arr = ['eQlGBSZc_lM:APA91bG-_hgSFQ5DOWAUPHMDiKjVOpbdL4CD0gBqhvT6CeBvlZ3bs6T1BSDsekgIiSz-QEOU5nGw2ks_A1tozDzHHPhHBRiwd22fFggqPmiVr9wvBNAzzvXASFYoFpusLbaI8FHWypXo'];
 
-				cb(null, notices);
-			});
+		var serverKey = 'AIzaSyA7eao_wnLiS-hdU9r7-KQuPcpq7tPJYXs';
+		var fcm = new FCM(serverKey);
+
+		var message = { //this may vary according to the message type (single recipient, multicast, topic, et cetera) 
+			to: 'eQlGBSZc_lM:APA91bG-_hgSFQ5DOWAUPHMDiKjVOpbdL4CD0gBqhvT6CeBvlZ3bs6T1BSDsekgIiSz-QEOU5nGw2ks_A1tozDzHHPhHBRiwd22fFggqPmiVr9wvBNAzzvXASFYoFpusLbaI8FHWypXo',
+			collapse_key: 'Meeting Room Alarm',
+
+			"notification": {
+				"title": "Simple FCM Client",
+				"body": "This is a notification with only NOTIFICATION.",
+				"sound": "default",
+				"click_action": "fcm.ACTION.HELLO"
+			}
+
+		};
+
+		fcm.send(message, function (err, response) {
+			if (err) {
+				console.log("Something has gone wrong!");
+			} else {
+				console.log("Successfully sent with response: ", response);
+			}
 		});
+
+		// FirebaseClient.sendNotificationWithData(arr);
+		// 		cb(null, notices);
+		// 	});
+		// });
 	}], function (err, result) {
 		console.log(result);
 		endProcess();
 	});
-})(Firebase);
+})(_firebase2.default, _fcmNode2.default);
